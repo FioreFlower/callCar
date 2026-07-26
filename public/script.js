@@ -1,11 +1,9 @@
 import { createApp } from "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js";
 
-const vehicleNumber = "56너 2855";
-
 createApp({
   data() {
     return {
-      vehicleNumber,
+      vehicleNumber: "",
       message: "차량 이동 부탁드립니다.",
       contact: "",
       website: "",
@@ -31,9 +29,11 @@ createApp({
 
         const config = await response.json();
         this.turnstileSiteKey = config.turnstileSiteKey || "";
+        this.vehicleNumber = config.vehicleNumber || "차량번호 확인 필요";
         this.$nextTick(() => this.renderTurnstile());
       } catch {
         this.turnstileSiteKey = "";
+        this.vehicleNumber = "차량번호 확인 필요";
       }
     },
 

@@ -4,16 +4,13 @@ QR 코드로 접속한 사람이 차량 이동 요청 메시지를 보내면 텔
 
 ## 설정
 
-차량번호는 `public/script.js`에서 아래 부분을 실제 번호로 바꾸면 됩니다.
-
-```js
-const vehicleNumber = "56너 2855";
-```
+차량번호는 공개 저장소 코드에 넣지 않고 Cloudflare Pages 환경변수로 설정합니다.
 
 Cloudflare Pages 프로젝트의 환경 변수에 아래 값을 추가합니다.
 
 - `TELEGRAM_BOT_TOKEN`: BotFather에서 받은 봇 토큰
 - `TELEGRAM_CHAT_ID`: 메시지를 받을 채팅 ID
+- `VEHICLE_NUMBER`: 페이지에 표시하고 텔레그램 메시지에 포함할 차량번호
 - `ALLOWED_ORIGIN`: 선택 사항. 커스텀 도메인을 쓴다면 `https://example.com`처럼 입력
 
 Turnstile을 쓰려면 Cloudflare에서 Turnstile 위젯을 만든 뒤 아래도 설정합니다.
