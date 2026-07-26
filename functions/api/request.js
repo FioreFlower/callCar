@@ -12,13 +12,6 @@ export async function onRequestPost(context) {
     );
   }
 
-  if (!botToken || !chatId) {
-    return json(
-      { ok: false, message: "텔레그램 설정이 아직 완료되지 않았습니다." },
-      500
-    );
-  }
-
   let body;
   try {
     body = await request.json();
@@ -61,6 +54,13 @@ export async function onRequestPost(context) {
         400
       );
     }
+  }
+
+  if (!botToken || !chatId) {
+    return json(
+      { ok: false, message: "텔레그램 설정이 아직 완료되지 않았습니다." },
+      500
+    );
   }
 
   const limit = await checkRateLimit(env.REQUEST_LIMITS, ip);
