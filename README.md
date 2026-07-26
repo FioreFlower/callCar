@@ -14,6 +14,7 @@ Cloudflare Pages 프로젝트의 환경 변수에 아래 값을 추가합니다.
 
 - `TELEGRAM_BOT_TOKEN`: BotFather에서 받은 봇 토큰
 - `TELEGRAM_CHAT_ID`: 메시지를 받을 채팅 ID
+- `ALLOWED_ORIGIN`: 선택 사항. 커스텀 도메인을 쓴다면 `https://example.com`처럼 입력
 
 Turnstile을 쓰려면 Cloudflare에서 Turnstile 위젯을 만든 뒤 아래도 설정합니다.
 

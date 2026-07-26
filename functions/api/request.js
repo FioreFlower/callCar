@@ -5,6 +5,13 @@ export async function onRequestPost(context) {
   const turnstileSecretKey = env.TURNSTILE_SECRET_KEY;
   const ip = getClientIp(request);
 
+  if (!isAllowedOrigin(request, env.ALLOWED_ORIGIN)) {
+    return json(
+      { ok: false, message: "허용되지 않은 요청입니다." },
+      403
+    );
+  }
+
   if (!botToken || !chatId) {
     return json(
       { ok: false, message: "텔레그램 설정이 아직 완료되지 않았습니다." },
@@ -120,7 +127,9 @@ export async function onRequestPost(context) {
 export function onRequestOptions() {
   return new Response(null, {
     status: 204,
-    headers: corsHeaders()
+    headers: {
+      Allow: "POST, OPTIONS"
+    }
   });
 }
 
@@ -136,18 +145,9 @@ function json(payload, status = 200, extraHeaders = {}) {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      ...corsHeaders(),
       ...extraHeaders
     }
   });
-}
-
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
-  };
 }
 
 function cleanText(value, maxLength) {
@@ -156,6 +156,18 @@ function cleanText(value, maxLength) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, maxLength);
+}
+
+function isAllowedOrigin(request, configuredOrigin) {
+  const origin = request.headers.get("Origin");
+  if (!origin) {
+    return true;
+  }
+
+  const requestOrigin = new URL(request.url).origin;
+  const allowedOrigin = cleanText(configuredOrigin || "", 200);
+
+  return origin === requestOrigin || origin === allowedOrigin;
 }
 
 function getClientIp(request) {
