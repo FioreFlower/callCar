@@ -1,7 +1,7 @@
 export function onRequestGet({ env }) {
   return new Response(
     JSON.stringify({
-      turnstileSiteKey: env.TURNSTILE_SITE_KEY || "",
+      turnstileSiteKey: env.PUBLIC_TURNSTILE_SITE_KEY || env.TURNSTILE_SITE_KEY || "",
       vehicleNumber: env.VEHICLE_NUMBER || ""
     }),
     {
