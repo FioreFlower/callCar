@@ -56,6 +56,13 @@ npm run deploy
 
 실제 배포가 오래된 파일을 보여주면 Cloudflare Pages의 최신 배포 커밋이 GitHub `main` 최신 커밋인지 확인하세요. Wrangler로 직접 배포할 때는 `wrangler.toml`의 `name = "callcar"`와 `pages_build_output_dir = "./public"` 설정을 사용합니다.
 
+GitHub Actions로 Cloudflare Pages에 직접 배포하려면 저장소 Secrets에 아래 값을 추가합니다.
+
+- `CLOUDFLARE_API_TOKEN`: Cloudflare Pages 배포 권한이 있는 API token
+- `CLOUDFLARE_ACCOUNT_ID`: Cloudflare Account ID
+
+Secrets를 넣으면 `main`에 push될 때 `.github/workflows/cloudflare-pages.yml`이 `callcar` Pages 프로젝트로 배포합니다.
+
 로컬에서 Pages Functions까지 같이 테스트하려면 Wrangler가 필요합니다.
 
 ```bash
