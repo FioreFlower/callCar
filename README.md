@@ -1,105 +1,91 @@
 # Call Car
 
-QR 코드로 접속한 사람이 차량 이동 요청 메시지를 보내면 텔레그램 봇으로 전달되는 Cloudflare Pages 웹페이지입니다.
+QR 코드로 접속한 사람이 차량 이동 요청 메시지를 보내면 텔레그램 봇으로 차주에게 전달되는 Cloudflare Pages 앱입니다.
 
-## 설정
+## 구조
 
-차량번호는 공개 저장소 코드에 넣지 않고 Cloudflare Pages 환경변수로 설정합니다.
+- `public/`: Vue 3 기반 정적 페이지
+- `functions/api/request.js`: 텔레그램 전송 API
+- `functions/api/config.js`: 공개 설정 API
+- `public/_headers`: 보안 헤더
+- `public/robots.txt`: 검색 색인 차단
 
-Cloudflare Pages 프로젝트의 환경 변수에 아래 값을 추가합니다.
+## 환경변수
 
-- `TELEGRAM_BOT_TOKEN`: BotFather에서 받은 봇 토큰
-- `TELEGRAM_CHAT_ID`: 메시지를 받을 채팅 ID
-- `VEHICLE_NUMBER`: 페이지에 표시하고 텔레그램 메시지에 포함할 차량번호
-- `ALLOWED_ORIGIN`: 선택 사항. 커스텀 도메인을 쓴다면 `https://example.com`처럼 입력
-
-Turnstile을 쓰려면 Cloudflare에서 Turnstile 위젯을 만든 뒤 아래도 설정합니다.
-
-- `PRIVATE_TURNSTILE_SECRET_KEY`: Turnstile Secret key
-- `PUBLIC_TURNSTILE_SITE_KEY`: Turnstile Site key
-
-스팸 방지를 위해 KV 네임스페이스도 하나 연결합니다.
-
-- Binding name: `REQUEST_LIMITS`
-- 제한값: 같은 IP 기준 10분에 3회
-
-KV 없이도 배포는 가능하지만, IP별 반복 요청 제한은 동작하지 않습니다.
-
-## Cloudflare 보안 권장 설정
-
-- SSL/TLS mode: `Full (strict)`
-- Always Use HTTPS: 켜기
-- Automatic HTTPS Rewrites: 켜기
-- Bot Fight Mode: 켜기
-- Security Level: `Medium`
-- Security headers: `public/_headers`에 포함되어 있음
-- WAF custom rule: `/api/request` 경로에 대해 위협 점수가 높은 요청은 Challenge
-- Rate limiting rule: `/api/request` 기준 같은 IP에서 10분 3회 초과 시 차단 또는 Challenge
-
-## Cloudflare Pages 배포
-
-Pages 설정값은 아래처럼 두면 됩니다.
-
-- Build command: 비워두기
-- Build output directory: `public`
-- Functions directory: `functions`
-- Production branch: `main`
-
-GitHub 저장소를 연결해서 배포하거나 Wrangler로 직접 배포할 수 있습니다.
-
-```bash
-npm run deploy
-```
-
-실제 배포가 오래된 파일을 보여주면 Cloudflare Pages의 최신 배포 커밋이 GitHub `main` 최신 커밋인지 확인하세요. Wrangler로 직접 배포할 때는 `wrangler.toml`의 `name = "callcar"`와 `pages_build_output_dir = "./public"` 설정을 사용합니다.
-
-GitHub Actions로 Cloudflare Pages에 직접 배포하려면 저장소 Secrets에 아래 값을 추가합니다.
-
-- `CLOUDFLARE_API_TOKEN`: Cloudflare Pages 배포 권한이 있는 API token
-- `CLOUDFLARE_ACCOUNT_ID`: Cloudflare Account ID
-
-Secrets를 넣으면 `main`에 push될 때 `.github/workflows/cloudflare-pages.yml`이 `callcar` Pages 프로젝트로 배포합니다.
-
-GitHub Secrets 위치:
+Cloudflare Pages의 Production 환경변수에 아래 값을 설정합니다.
 
 ```text
-GitHub repository → Settings → Secrets and variables → Actions → New repository secret
+TELEGRAM_BOT_TOKEN=BotFather에서 받은 봇 토큰
+TELEGRAM_CHAT_ID=메시지를 받을 텔레그램 chat id
+VEHICLE_NUMBER=페이지에 표시할 차량번호
+PUBLIC_TURNSTILE_SITE_KEY=Turnstile Site key
+PRIVATE_TURNSTILE_SECRET_KEY=Turnstile Secret key
 ```
 
-Cloudflare Account ID 위치:
+`PUBLIC_TURNSTILE_SITE_KEY`는 브라우저로 내려가는 공개값입니다. `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PRIVATE_TURNSTILE_SECRET_KEY`는 secret으로 관리하세요.
+
+## 스팸 방지
+
+- Turnstile 검증
+- 허니팟 필드
+- 제출 시간 검증
+- Origin 검증
+- KV 기반 IP 제한
+
+KV 바인딩 이름:
 
 ```text
-Cloudflare dashboard → 오른쪽 사이드바 또는 Account home → Account ID
+REQUEST_LIMITS
 ```
 
-Cloudflare API token은 Custom token으로 만들고 최소 권한을 부여합니다.
+제한값은 같은 IP 기준 10분에 3회입니다.
 
-```text
-Account - Cloudflare Pages: Edit
-Account - Account Settings: Read
-```
-
-워크플로가 성공했는지 확인하는 위치:
-
-```text
-GitHub repository → Actions → Deploy Cloudflare Pages
-```
-
-로컬에서 Pages Functions까지 같이 테스트하려면 Wrangler가 필요합니다.
+## 로컬 실행
 
 ```bash
 cp .dev.vars.example .dev.vars
 npm run dev
 ```
 
+로컬 주소는 Wrangler 출력값을 사용하세요. 보통 `http://localhost:8788`입니다.
+
+## Cloudflare Pages 배포
+
+Pages 설정:
+
+```text
+Build command: 비워두기
+Build output directory: public
+Functions directory: functions
+Production branch: main
+```
+
+직접 배포:
+
+```bash
+npm run deploy
+```
+
+GitHub Actions 배포를 쓰려면 GitHub repository secrets에 아래 값을 넣습니다.
+
+```text
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+```
+
 ## 텔레그램 Chat ID 확인
 
-봇에게 아무 메시지나 보낸 뒤 아래 주소를 브라우저에서 열어 `chat.id` 값을 확인할 수 있습니다.
+봇에게 아무 메시지나 보낸 뒤 아래 주소를 브라우저에서 엽니다.
 
 ```text
 https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
 ```
 
-## 배포 메모
+응답의 `chat.id` 값을 `TELEGRAM_CHAT_ID`로 사용합니다.
 
-실제 QR 코드에는 Cloudflare Pages에서 발급된 HTTPS 주소를 넣으세요. 봇 토큰은 반드시 Cloudflare 환경 변수에만 저장하고, `public` 폴더 안 파일이나 브라우저 코드에 넣으면 안 됩니다.
+## 보안 메모
+
+- 차량번호와 토큰은 공개 저장소 코드에 넣지 않습니다.
+- 실제 QR 코드에는 배포된 HTTPS 주소를 넣습니다.
+- `callcar.pages.dev` 기본 도메인을 쓰면 Zone 단위 WAF/Bot Fight 설정은 제한적입니다.
+- 커스텀 도메인을 연결하면 해당 Zone에서 WAF, Bot Fight Mode, Rate limiting rule을 추가로 설정할 수 있습니다.
