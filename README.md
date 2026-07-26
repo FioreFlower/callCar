@@ -15,7 +15,7 @@ Cloudflare Pages 프로젝트의 환경 변수에 아래 값을 추가합니다.
 
 Turnstile을 쓰려면 Cloudflare에서 Turnstile 위젯을 만든 뒤 아래도 설정합니다.
 
-- `TURNSTILE_SECRET_KEY`: Turnstile Secret key
+- `PRIVATE_TURNSTILE_SECRET_KEY`: Turnstile Secret key
 - `PUBLIC_TURNSTILE_SITE_KEY`: Turnstile Site key
 
 스팸 방지를 위해 KV 네임스페이스도 하나 연결합니다.

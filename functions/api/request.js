@@ -2,7 +2,7 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   const botToken = env.TELEGRAM_BOT_TOKEN;
   const chatId = env.TELEGRAM_CHAT_ID;
-  const turnstileSecretKey = env.TURNSTILE_SECRET_KEY;
+  const turnstileSecretKey = env.PRIVATE_TURNSTILE_SECRET_KEY || env.TURNSTILE_SECRET_KEY;
   const ip = getClientIp(request);
 
   if (!isAllowedOrigin(request, env.ALLOWED_ORIGIN)) {
