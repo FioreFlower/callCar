@@ -28,6 +28,8 @@ createApp({
     renderTurnstile() {
       if (!this.turnstileSiteKey) return;
 
+      loadTurnstileScript();
+
       const waitForTurnstile = window.setInterval(() => {
         if (!window.turnstile || !this.$refs.turnstile) return;
 
@@ -106,6 +108,17 @@ createApp({
     },
   },
 }).mount("#app");
+
+function loadTurnstileScript() {
+  if (document.querySelector("[data-turnstile-script]")) return;
+
+  const script = document.createElement("script");
+  script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+  script.async = true;
+  script.defer = true;
+  script.dataset.turnstileScript = "true";
+  document.head.append(script);
+}
 
 function getClientInfo() {
   return {

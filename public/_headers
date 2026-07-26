@@ -4,6 +4,8 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin
+  X-Robots-Tag: noindex, nofollow
 
 /api/*
   Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
