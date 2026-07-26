@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx wrangler pages dev public",
-    "deploy": "npx wrangler pages deploy public"
+    "deploy": "npx wrangler pages deploy public --project-name callcar --branch main"
   },
   "engines": {
     "node": ">=20"

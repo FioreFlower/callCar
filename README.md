@@ -46,12 +46,15 @@ Pages 설정값은 아래처럼 두면 됩니다.
 - Build command: 비워두기
 - Build output directory: `public`
 - Functions directory: `functions`
+- Production branch: `main`
 
 GitHub 저장소를 연결해서 배포하거나 Wrangler로 직접 배포할 수 있습니다.
 
 ```bash
 npm run deploy
 ```
+
+실제 배포가 오래된 파일을 보여주면 Cloudflare Pages의 최신 배포 커밋이 GitHub `main` 최신 커밋인지 확인하세요. Wrangler로 직접 배포할 때는 `wrangler.toml`의 `name = "callcar"`와 `pages_build_output_dir = "./public"` 설정을 사용합니다.
 
 로컬에서 Pages Functions까지 같이 테스트하려면 Wrangler가 필요합니다.
 
