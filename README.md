@@ -35,6 +35,7 @@ KV 없이도 배포는 가능하지만, IP별 반복 요청 제한은 동작하�
 - Automatic HTTPS Rewrites: 켜기
 - Bot Fight Mode: 켜기
 - Security Level: `Medium`
+- Security headers: `public/_headers`에 포함되어 있음
 - WAF custom rule: `/api/request` 경로에 대해 위협 점수가 높은 요청은 Challenge
 - Rate limiting rule: `/api/request` 기준 같은 IP에서 10분 3회 초과 시 차단 또는 Challenge
 
