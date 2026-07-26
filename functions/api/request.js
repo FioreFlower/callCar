@@ -88,33 +88,15 @@ export async function onRequestPost(context) {
     "",
     "[접속 정보]",
     `IP: ${ip}`,
-    `국가: ${cleanHeader(request, "CF-IPCountry") || "알 수 없음"}`,
-    `브라우저: ${clientInfo.userAgent || "알 수 없음"}`,
-    `언어: ${clientInfo.languages || clientInfo.language || "알 수 없음"}`,
-    `플랫폼: ${clientInfo.platform || "알 수 없음"}`,
-    `시간대: ${clientInfo.timezone || "알 수 없음"}`,
-    `화면: ${clientInfo.screen || "알 수 없음"}`,
-    `뷰포트: ${clientInfo.viewport || "알 수 없음"}`,
-    `DPR: ${clientInfo.devicePixelRatio || "알 수 없음"}`,
-    clientInfo.referrer ? `이전 페이지: ${clientInfo.referrer}` : null
+    ...formatServerInfo(request),
+    "",
+    "[브라우저 정보]",
+    ...formatClientInfo(clientInfo)
   ].filter(Boolean);
 
-  const telegramResponse = await fetch(
-    `https://api.telegram.org/bot${botToken}/sendMessage`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: lines.join("\n"),
-        disable_notification: false
-      })
-    }
-  );
-
-  if (!telegramResponse.ok) {
-    const detail = await telegramResponse.text();
-    console.error("Telegram error:", detail);
+  const telegramResult = await sendTelegramMessages(botToken, chatId, lines.join("\n"));
+  if (!telegramResult.ok) {
+    console.error("Telegram error:", telegramResult.detail);
     return json(
       { ok: false, message: "텔레그램 전송에 실패했습니다. 설정을 확인해 주세요." },
       502
@@ -183,17 +165,133 @@ function cleanHeader(request, name) {
 }
 
 function cleanClientInfo(info) {
-  return {
-    userAgent: cleanText(info.userAgent || "", 240),
-    language: cleanText(info.language || "", 40),
-    languages: cleanText(info.languages || "", 160),
-    platform: cleanText(info.platform || "", 80),
-    timezone: cleanText(info.timezone || "", 80),
-    screen: cleanText(info.screen || "", 40),
-    viewport: cleanText(info.viewport || "", 40),
-    devicePixelRatio: cleanText(info.devicePixelRatio || "", 20),
-    referrer: cleanText(info.referrer || "", 200)
-  };
+  return cleanObject(info, 0);
+}
+
+function formatServerInfo(request) {
+  const cf = request.cf || {};
+
+  return [
+    `국가: ${cleanHeader(request, "CF-IPCountry") || cleanText(cf.country || "", 80) || "알 수 없음"}`,
+    addLine("지역", cf.region || cf.regionCode),
+    addLine("도시", cf.city),
+    addLine("우편번호", cf.postalCode),
+    cf.latitude || cf.longitude
+      ? `좌표: ${cleanText(cf.latitude || "", 40)}, ${cleanText(cf.longitude || "", 40)}`
+      : null,
+    addLine("Cloudflare colo", cf.colo),
+    addLine("ASN", cf.asn),
+    addLine("AS 조직", cf.asOrganization),
+    addLine("HTTP", cf.httpProtocol),
+    addLine("TLS", cf.tlsVersion),
+    addLine("TLS cipher", cf.tlsCipher),
+    addLine("CF-Ray", request.headers.get("CF-Ray")),
+    addLine("Accept-Language", request.headers.get("Accept-Language")),
+    addLine("Sec-CH-UA", request.headers.get("Sec-CH-UA")),
+    addLine("Sec-CH-UA-Mobile", request.headers.get("Sec-CH-UA-Mobile")),
+    addLine("Sec-CH-UA-Platform", request.headers.get("Sec-CH-UA-Platform"))
+  ];
+}
+
+function formatClientInfo(clientInfo) {
+  const lines = flattenClientInfo(clientInfo);
+  return lines.length ? lines : ["수집된 브라우저 정보 없음"];
+}
+
+function addLine(label, value, maxLength = 160) {
+  const cleanValue = cleanText(value || "", maxLength);
+  return cleanValue ? `${label}: ${cleanValue}` : null;
+}
+
+function cleanObject(value, depth) {
+  if (value === null || value === undefined || depth > 4) {
+    return "";
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 40).map((item) => cleanObject(item, depth + 1));
+  }
+
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .slice(0, 120)
+        .map(([key, item]) => [
+          cleanText(key, 80),
+          cleanObject(item, depth + 1)
+        ])
+        .filter(([key]) => Boolean(key))
+    );
+  }
+
+  return cleanText(value, 500);
+}
+
+function flattenClientInfo(value, prefix = "") {
+  if (value === null || value === undefined || value === "") {
+    return [];
+  }
+
+  if (typeof value !== "object") {
+    return [`${prefix}: ${cleanText(value, 500)}`];
+  }
+
+  return Object.entries(value).flatMap(([key, item]) => {
+    const label = prefix ? `${prefix}.${key}` : key;
+    return flattenClientInfo(item, label);
+  });
+}
+
+async function sendTelegramMessages(botToken, chatId, text) {
+  const chunks = splitTelegramText(text);
+
+  for (const [index, chunk] of chunks.entries()) {
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: chunks.length > 1 ? `[${index + 1}/${chunks.length}]\n${chunk}` : chunk,
+          disable_notification: false
+        })
+      }
+    );
+
+    if (!response.ok) {
+      return { ok: false, detail: await response.text() };
+    }
+  }
+
+  return { ok: true, detail: "" };
+}
+
+function splitTelegramText(text) {
+  const maxLength = 3600;
+  const chunks = [];
+  let current = "";
+
+  for (const line of text.split("\n")) {
+    const next = current ? `${current}\n${line}` : line;
+    if (next.length > maxLength) {
+      if (current) {
+        chunks.push(current);
+        current = line;
+      } else {
+        chunks.push(line.slice(0, maxLength));
+        current = line.slice(maxLength);
+      }
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks;
 }
 
 function isPlausibleSubmitTime(formLoadedAt) {
