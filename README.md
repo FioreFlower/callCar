@@ -63,6 +63,31 @@ GitHub Actions로 Cloudflare Pages에 직접 배포하려면 저장소 Secrets�
 
 Secrets를 넣으면 `main`에 push될 때 `.github/workflows/cloudflare-pages.yml`이 `callcar` Pages 프로젝트로 배포합니다.
 
+GitHub Secrets 위치:
+
+```text
+GitHub repository → Settings → Secrets and variables → Actions → New repository secret
+```
+
+Cloudflare Account ID 위치:
+
+```text
+Cloudflare dashboard → 오른쪽 사이드바 또는 Account home → Account ID
+```
+
+Cloudflare API token은 Custom token으로 만들고 최소 권한을 부여합니다.
+
+```text
+Account - Cloudflare Pages: Edit
+Account - Account Settings: Read
+```
+
+워크플로가 성공했는지 확인하는 위치:
+
+```text
+GitHub repository → Actions → Deploy Cloudflare Pages
+```
+
 로컬에서 Pages Functions까지 같이 테스트하려면 Wrangler가 필요합니다.
 
 ```bash
