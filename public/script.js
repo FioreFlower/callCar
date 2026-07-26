@@ -1,7 +1,6 @@
 import { createApp } from "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js";
 
 const vehicleNumber = "56너 2855";
-const turnstileSiteKey = "";
 
 createApp({
   data() {
@@ -14,17 +13,30 @@ createApp({
       statusMessage: "",
       statusType: "",
       formLoadedAt: Date.now(),
-      turnstileSiteKey,
+      turnstileSiteKey: "",
       turnstileToken: "",
       turnstileWidgetId: null,
     };
   },
 
   mounted() {
-    this.renderTurnstile();
+    this.loadConfig();
   },
 
   methods: {
+    async loadConfig() {
+      try {
+        const response = await fetch("/api/config", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const config = await response.json();
+        this.turnstileSiteKey = config.turnstileSiteKey || "";
+        this.$nextTick(() => this.renderTurnstile());
+      } catch {
+        this.turnstileSiteKey = "";
+      }
+    },
+
     renderTurnstile() {
       if (!this.turnstileSiteKey) return;
 
