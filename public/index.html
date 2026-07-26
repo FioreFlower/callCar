@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>차 빼주세요</title>
+    <meta name="theme-color" content="#0f766e" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  </head>
+  <body>
+    <main id="app" class="page" v-cloak>
+      <section class="request-panel" aria-labelledby="page-title">
+        <div class="brand-row">
+          <div class="car-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" role="img">
+              <path d="M12 35h40l-5-14a6 6 0 0 0-6-4H23a6 6 0 0 0-6 4l-5 14Z" />
+              <path
+                d="M9 34h46a5 5 0 0 1 5 5v7a3 3 0 0 1-3 3h-5a6 6 0 0 1-12 0H24a6 6 0 0 1-12 0H7a3 3 0 0 1-3-3v-7a5 5 0 0 1 5-5Z"
+              />
+              <path d="M22 23h20l3 9H19l3-9Z" />
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">차량 이동 요청</p>
+            <h1 id="page-title">부득이하게 주차중입니다.</h1>
+            <p class="lede">
+              아래 차량번호가 맞는지 확인한 뒤 요청을 보내 주세요.
+            </p>
+          </div>
+        </div>
+
+        <div class="vehicle-card" aria-label="요청 대상 차량번호">
+          <span class="plate-label">차량번호</span>
+          <strong>{{ vehicleNumber }}</strong>
+        </div>
+
+        <form class="form" @submit.prevent="submitRequest">
+          <input
+            v-model="website"
+            class="trap"
+            name="website"
+            tabindex="-1"
+            autocomplete="off"
+          />
+
+          <div
+            v-if="turnstileSiteKey"
+            ref="turnstile"
+            class="turnstile-box"
+            aria-label="스팸 방지 확인"
+          ></div>
+
+          <label for="message">요청 내용</label>
+          <textarea
+            id="message"
+            v-model.trim="message"
+            maxlength="500"
+            required
+            placeholder="예: 차량 이동 부탁드립니다. 출차가 필요합니다."
+          >
+            차량 이동 부탁드립니다.
+          </textarea>
+
+          <label for="contact">연락처</label>
+          <input
+            id="contact"
+            v-model.trim="contact"
+            maxlength="80"
+            inputmode="text"
+            placeholder="연락처를 남겨 주시면 연락 드리겠습니다."
+          />
+
+          <button class="submit-button" type="submit" :disabled="isSending">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M22 2 11 13" />
+              <path d="m22 2-7 20-4-9-9-4 20-7Z" />
+            </svg>
+            {{ isSending ? "전송 중" : "전송하기" }}
+          </button>
+          <p
+            class="status"
+            :class="statusType"
+            role="status"
+            aria-live="polite"
+          >
+            {{ statusMessage }}
+          </p>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="/script.js"></script>
+  </body>
+</html>
