@@ -183,16 +183,6 @@ h1 {
   align-items: center;
 }
 
-.privacy-note {
-  margin: 4px 0 0;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: #f6f8f7;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .quick-actions button,
 .submit-button {
   min-height: 50px;
