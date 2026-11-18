@@ -89,3 +89,37 @@ https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
 - 실제 QR 코드에는 배포된 HTTPS 주소를 넣습니다.
 - `callcar.pages.dev` 기본 도메인을 쓰면 Zone 단위 WAF/Bot Fight 설정은 제한적입니다.
 - 커스텀 도메인을 연결하면 해당 Zone에서 WAF, Bot Fight Mode, Rate limiting rule을 추가로 설정할 수 있습니다.
+
+## Telegram 답장 표시
+
+요청 알림에 Telegram의 **답장** 기능으로 텍스트를 보내면 요청을 보낸 탭에 표시됩니다. 화면이 열려 있는 동안 약 6초 간격으로 확인하며, 같은 탭에서 새로고침해도 요청 후 30분까지 답변을 확인할 수 있습니다. 이후 조회가 만료됩니다. 만료된 기록은 다음 답장 세션이 생성될 때 정리됩니다.
+
+### Cloudflare 설정
+
+1. D1 데이터베이스를 만들고 아래 명령을 저장소 루트에서 실행해 스키마를 적용합니다. 데이터베이스 이름이 다르면 명령의 이름을 바꿉니다.
+
+   ```bash
+   npx wrangler d1 execute callcar-replies --remote --file=db/replies.sql
+   ```
+
+2. Pages 프로젝트의 Production 설정에서 위 데이터베이스를 `CAR_REPLIES`라는 D1 바인딩으로 추가합니다.
+3. Pages의 Production 환경에 `TELEGRAM_WEBHOOK_SECRET`을 Secret으로 추가합니다. 예를 들어 `openssl rand -hex 32`로 생성한 값을 사용합니다.
+4. 봇과의 개인 채팅은 기존 `TELEGRAM_CHAT_ID`를 사용합니다. 단체 채팅을 쓰는 경우 답장을 보낼 차주의 숫자 Telegram 사용자 ID를 `TELEGRAM_REPLY_OWNER_ID`에 설정합니다.
+5. Pages를 다시 배포합니다. 기존 Telegram 및 Turnstile 환경변수와 `REQUEST_LIMITS` 바인딩은 계속 사용합니다.
+
+### Telegram 웹훅 등록
+
+1. 봇의 `getWebhookInfo`를 확인합니다. 다른 서비스가 사용하는 웹훅이 등록돼 있으면 그 서비스에 영향을 주므로 등록 주소를 바꾸기 전에 확인합니다.
+2. 배포 후 [Telegram Bot API의 setWebhook](https://core.telegram.org/bots/api#setwebhook)에 아래 JSON으로 POST합니다. API 주소는 `https://api.telegram.org/bot<BOT_TOKEN>/setWebhook`입니다. 봇 토큰과 웹훅 시크릿은 개인 환경에서만 사용합니다.
+
+   ```json
+   {
+     "url": "https://<PRODUCTION_HOST>/api/telegram-webhook",
+     "secret_token": "<TELEGRAM_WEBHOOK_SECRET과 동일한 값>",
+     "allowed_updates": ["message"]
+   }
+   ```
+
+3. 요청을 새로 보내고 Telegram에서 해당 알림에 답장합니다. 요청한 탭에는 답변이 표시되고, 별도 시크릿 창에는 표시되지 않는지 확인합니다.
+
+D1 바인딩이나 웹훅 시크릿이 없으면 기존 차량 이동 알림만 작동합니다.

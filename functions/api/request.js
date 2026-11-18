@@ -1,3 +1,5 @@
+import { createReplySession, REPLY_REFERENCE_PREFIX } from "../lib/replies.js";
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   const botToken = env.TELEGRAM_BOT_TOKEN;
@@ -94,7 +96,8 @@ export async function onRequestPost(context) {
     ...formatClientInfo(clientInfo)
   ].filter(Boolean);
 
-  const telegramResult = await sendTelegramMessages(botToken, chatId, lines.join("\n"));
+  const replySession = await createReplySession(env);
+  const telegramResult = await sendTelegramMessages(botToken, chatId, lines.join("\n"), replySession?.id);
   if (!telegramResult.ok) {
     console.error("Telegram error:", telegramResult.detail);
     return json(
@@ -103,7 +106,12 @@ export async function onRequestPost(context) {
     );
   }
 
-  return json({ ok: true, message: "전송되었습니다." });
+  const result = { ok: true, message: "전송되었습니다." };
+  if (replySession) {
+    result.replyToken = replySession.token;
+    result.replyExpiresAt = replySession.expiresAt;
+  }
+  return json(result);
 }
 
 export function onRequestOptions() {
@@ -481,10 +489,14 @@ const CAPABILITY_LABELS = {
   pointerEvent: "Pointer Event"
 };
 
-async function sendTelegramMessages(botToken, chatId, text) {
+async function sendTelegramMessages(botToken, chatId, text, replyId) {
   const chunks = splitTelegramText(text);
 
+  const reference = replyId
+    ? `${REPLY_REFERENCE_PREFIX}${replyId}\n답장을 보내면 요청자 화면에 표시됩니다.\n\n`
+    : "";
   for (const [index, chunk] of chunks.entries()) {
+    const content = chunks.length > 1 ? `[${index + 1}/${chunks.length}]\n${chunk}` : chunk;
     const response = await fetch(
       `https://api.telegram.org/bot${botToken}/sendMessage`,
       {
@@ -492,7 +504,7 @@ async function sendTelegramMessages(botToken, chatId, text) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: chunks.length > 1 ? `[${index + 1}/${chunks.length}]\n${chunk}` : chunk,
+          text: reference + content,
           disable_notification: false
         })
       }
