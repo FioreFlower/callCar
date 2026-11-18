@@ -1,5 +1,7 @@
 import { createApp } from "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js";
 
+const REPLY_STORAGE_KEY = "callcar-replies";
+
 createApp({
   data() {
     return {
@@ -14,18 +16,30 @@ createApp({
       turnstileSiteKey: "",
       turnstileToken: "",
       turnstileWidgetId: null,
+      replySessions: [],
+      replyTimer: null,
+      isCheckingReplies: false,
     };
   },
 
   mounted() {
     this.loadConfig();
+    this.restoreReplies();
+    this.checkReplies();
+    this.replyTimer = window.setInterval(() => this.checkReplies(), 6000);
+    document.addEventListener("visibilitychange", this.checkReplies);
+  },
+
+  beforeUnmount() {
+    window.clearInterval(this.replyTimer);
+    document.removeEventListener("visibilitychange", this.checkReplies);
   },
 
   methods: {
     async loadConfig() {
       try {
         const response = await fetch("/api/config", { cache: "no-store" });
-        if (!response.ok) return;
+        if (!response.ok) throw new Error("차량번호를 불러오지 못했습니다.");
 
         const config = await response.json();
         this.turnstileSiteKey = config.turnstileSiteKey || "";
@@ -48,6 +62,7 @@ createApp({
         window.clearInterval(waitForTurnstile);
         this.turnstileWidgetId = window.turnstile.render(this.$refs.turnstile, {
           sitekey: this.turnstileSiteKey,
+          size: this.$refs.turnstile.clientWidth >= 300 ? "flexible" : "compact",
           callback: (token) => {
             this.turnstileToken = token;
           },
@@ -63,6 +78,8 @@ createApp({
     },
 
     async submitRequest() {
+      if (this.isSending) return;
+
       this.setStatus("", "");
 
       if (this.turnstileSiteKey && !this.turnstileToken) {
@@ -100,12 +117,87 @@ createApp({
         this.formLoadedAt = Date.now();
         this.resetTurnstile();
         this.setStatus("전송되었습니다. 감사합니다.", "success");
+        this.watchReply(result);
       } catch (error) {
         this.setStatus(error.message || "잠시 후 다시 시도해 주세요.", "error");
         this.resetTurnstile();
       } finally {
         this.isSending = false;
       }
+    },
+
+    restoreReplies() {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(REPLY_STORAGE_KEY) || "[]");
+        if (Array.isArray(saved)) {
+          this.replySessions = saved.filter(session =>
+            typeof session?.token === "string" && session.expiresAt > Date.now()
+          );
+          if (saved.length !== this.replySessions.length) this.saveReplies();
+        }
+      } catch {
+        // Replies are still available in the open page when storage is blocked.
+      }
+    },
+
+    saveReplies() {
+      try {
+        sessionStorage.setItem(REPLY_STORAGE_KEY, JSON.stringify(this.replySessions));
+      } catch {
+        // Keep the current page working when session storage is unavailable.
+      }
+    },
+
+    watchReply({ replyToken, replyExpiresAt }) {
+      if (typeof replyToken !== "string" || !Number.isFinite(replyExpiresAt)) return;
+
+      this.replySessions.unshift({
+        token: replyToken,
+        expiresAt: replyExpiresAt,
+        requestedAt: Date.now(),
+        reply: "",
+      });
+      this.saveReplies();
+      this.checkReplies();
+    },
+
+    async checkReplies() {
+      if (document.hidden || this.isCheckingReplies || !this.replySessions.length) return;
+
+      const active = this.replySessions.filter(session => session.expiresAt > Date.now());
+      if (active.length !== this.replySessions.length) {
+        this.replySessions = active;
+        this.saveReplies();
+      }
+      if (!active.length) return;
+
+      this.isCheckingReplies = true;
+      try {
+        await Promise.all(active.map(async session => {
+          try {
+            const response = await fetch("/api/reply", {
+              cache: "no-store",
+              headers: { Authorization: `Bearer ${session.token}` },
+              signal: AbortSignal.timeout(8000),
+            });
+            if (!response.ok) return;
+
+            const { reply } = await response.json();
+            if (typeof reply === "string" && session.reply !== reply) {
+              session.reply = reply;
+              this.saveReplies();
+            }
+          } catch {
+            // Retry on the next refresh if the connection drops.
+          }
+        }));
+      } finally {
+        this.isCheckingReplies = false;
+      }
+    },
+
+    requestTime(timestamp) {
+      return new Date(timestamp).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
     },
 
     resetTurnstile() {
